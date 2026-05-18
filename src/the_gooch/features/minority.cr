@@ -17,6 +17,7 @@ module TheGooch::Features::Minority
   struct Assessment
     getter trigger : Bool
     getter report : TheGooch::BlockBody::MinorityReport?
+
     def initialize(@trigger, @report)
     end
   end

@@ -25,9 +25,9 @@ module TheGooch::Features::Forking
     # Materialize both branch heads as empty placeholder bodies so the chain
     # has explicit heads to extend from.
     a_head = blockchain.append_block("genesis", TheGooch::BlockBody::Genesis.new("branch-A genesis").to_json,
-                                     "", [block.hash], branch_a)
+      "", [block.hash], branch_a)
     b_head = blockchain.append_block("genesis", TheGooch::BlockBody::Genesis.new("branch-B genesis").to_json,
-                                     "", [block.hash], branch_b)
+      "", [block.hash], branch_b)
 
     {branch_a, branch_b, block}
   end
@@ -39,6 +39,6 @@ module TheGooch::Features::Forking
     raise "missing branch heads" unless a_head && b_head
     body = TheGooch::BlockBody::Reconciliation.new(a_head.hash, b_head.hash, decision)
     blockchain.append_block("reconciliation", body.to_json, "",
-                            [a_head.hash, b_head.hash], TheGooch::Chain::MAIN_BRANCH)
+      [a_head.hash, b_head.hash], TheGooch::Chain::MAIN_BRANCH)
   end
 end

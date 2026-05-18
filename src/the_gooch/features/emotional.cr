@@ -16,6 +16,7 @@ module TheGooch::Features::Emotional
   struct CastResult
     getter vote : TheGooch::EmotionalVote
     getter opening : Pedersen::Opening
+
     def initialize(@vote, @opening)
     end
   end

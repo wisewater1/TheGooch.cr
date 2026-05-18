@@ -44,6 +44,7 @@ module TheGooch::BlockBody
   struct Genesis
     include JSON::Serializable
     getter note : String
+
     def initialize(@note : String = "genesis")
     end
   end
@@ -52,6 +53,7 @@ module TheGooch::BlockBody
     include JSON::Serializable
     getter votes_json : Array(String) # each is a Vote rendered as JSON
     getter opened_sealed_ids : Array(String)
+
     def initialize(@votes_json, @opened_sealed_ids)
     end
   end
@@ -65,6 +67,7 @@ module TheGooch::BlockBody
     getter raw_margin : Float64
     getter weighted_margin : Float64
     getter intensity_gap : Float64
+
     def initialize(@election_block_hash, @per_candidate_raw, @per_candidate_weighted,
                    @winner, @raw_margin, @weighted_margin, @intensity_gap)
     end
@@ -76,6 +79,7 @@ module TheGooch::BlockBody
     getter trust_scores : Array(Float64)
     getter mean : Float64
     getter variance : Float64
+
     def initialize(@target_block_hash, @trust_scores, @mean, @variance)
     end
   end
@@ -86,6 +90,7 @@ module TheGooch::BlockBody
     getter hhi : Float64
     getter margin : Float64
     getter dominant_region : String
+
     def initialize(@losing_side, @hhi, @margin, @dominant_region)
     end
   end
@@ -94,6 +99,7 @@ module TheGooch::BlockBody
     include JSON::Serializable
     getter target_block_hash : String
     getter report : MinorityReport
+
     def initialize(@target_block_hash, @report)
     end
   end
@@ -104,6 +110,7 @@ module TheGooch::BlockBody
     getter branch_a_id : String
     getter branch_b_id : String
     getter criterion : String
+
     def initialize(@parent_hash, @branch_a_id, @branch_b_id, @criterion)
     end
   end
@@ -121,6 +128,7 @@ module TheGooch::BlockBody
     include JSON::Serializable
     getter target_outcome_hash : String
     getter voter_ids : Array(String)
+
     def initialize(@target_outcome_hash, @voter_ids)
     end
   end
@@ -129,6 +137,7 @@ module TheGooch::BlockBody
     include JSON::Serializable
     getter target_outcome_hash : String
     getter decayed_weight : Float64
+
     def initialize(@target_outcome_hash, @decayed_weight)
     end
   end

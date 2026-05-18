@@ -20,18 +20,20 @@ require "../tally/engine"
 #   - a meta-vote round records trust scores
 #   - a time-skewed decay scan emits Expiry, then a Ratification resets it
 module TheGooch::Demo
-  REGIONS = ["north", "south", "east", "west"]
+  REGIONS    = ["north", "south", "east", "west"]
   CANDIDATES = ["Calm", "Bold"]
 
   struct Result
     getter blockchain : TheGooch::Blockchain
     getter feature_blocks : Hash(String, Array(Int32))
+
     def initialize(@blockchain, @feature_blocks)
     end
   end
 
-  def self.run(io : IO = STDOUT, time_skew_seconds : Float64 = 1.0e9) : Result
-    blockchain = TheGooch::Blockchain.new
+  def self.run(io : IO = STDOUT, time_skew_seconds : Float64 = 1.0e9,
+               store : TheGooch::BlockStore::Base = TheGooch::BlockStore::Null.new) : Result
+    blockchain = TheGooch::Blockchain.new(store)
     feature_blocks = Hash(String, Array(Int32)).new { |h, k| h[k] = [] of Int32 }
 
     log = ->(feature : String, message : String) do
@@ -55,8 +57,8 @@ module TheGooch::Demo
     # --- First election: rigged narrow margin --------------------------------
     log.call("emotional", "casting first round (10 living voters, varied intensities)")
     first_votes, first_openings = cast_first_round(voters)
-    first_election = commit_election(blockchain, first_votes, [] of String,
-                                     TheGooch::Chain::MAIN_BRANCH, log, feature_blocks)
+    first_election = commit_election(blockchain, first_votes, Array(String).new,
+      TheGooch::Chain::MAIN_BRANCH, log, feature_blocks)
 
     outcome = TheGooch::Tally.compute(first_votes, first_openings)
     log.call("tally", "first round raw=#{outcome.per_candidate_raw} weighted=#{outcome.per_candidate_weighted.transform_values { |v| v.round(2) }}")
@@ -69,7 +71,7 @@ module TheGooch::Demo
     if assessment.trigger && (report = assessment.report)
       log.call("minority", "HHI=#{report.hhi.round(3)} concentrated in '#{report.dominant_region}' — deferring finalization")
       delib = TheGooch::BlockBody::Deliberation.new(first_election.hash, report)
-      blk = blockchain.append_block("deliberation", delib.to_json, "", [] of String, TheGooch::Chain::MAIN_BRANCH)
+      blk = blockchain.append_block("deliberation", delib.to_json, "", Array(String).new, TheGooch::Chain::MAIN_BRANCH)
       feature_blocks["minority"] << blk.index
     else
       log.call("minority", "no trigger; finalizing")
@@ -82,12 +84,12 @@ module TheGooch::Demo
     # Open posthumous ballots between rounds.
     opened_ids = open_posthumous(sealed_tl, sealed_oracle, attest_msg, voters, second_votes, log)
     second_election = commit_election(blockchain, second_votes, opened_ids,
-                                      TheGooch::Chain::MAIN_BRANCH, log, feature_blocks)
+      TheGooch::Chain::MAIN_BRANCH, log, feature_blocks)
 
     outcome2 = TheGooch::Tally.compute(second_votes, second_openings)
     log.call("tally", "second round raw=#{outcome2.per_candidate_raw} winner=#{outcome2.winner} raw_margin=#{outcome2.raw_margin.round(3)} intensity_gap=#{outcome2.intensity_gap.round(3)}")
     tally_blk = blockchain.append_block("tally", outcome2.to_body(second_election.hash).to_json,
-                                        "", [] of String, TheGooch::Chain::MAIN_BRANCH)
+      "", Array(String).new, TheGooch::Chain::MAIN_BRANCH)
     feature_blocks["tally"] << tally_blk.index
 
     # --- Forking democracy ---------------------------------------------------

@@ -1,0 +1,25 @@
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  spec:
+    runs-on: ubuntu-latest
+    container:
+      image: crystallang/crystal:1.14.0
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build deps
+        run: |
+          apt-get update
+          apt-get install -y libgmp-dev libssl-dev libxml2-dev libyaml-dev libpcre3-dev
+      - name: Crystal version
+        run: crystal --version
+      - name: Format check
+        run: crystal tool format --check
+      - name: Compile
+        run: crystal build src/cli.cr -o bin/the_gooch -Dno_gmp
+      - name: Spec
+        run: crystal spec -Dno_gmp
