@@ -9,6 +9,7 @@ module TheGooch::CLI
     the_gooch demo [--time-skew=SECONDS] [--persist=PATH]
     the_gooch validate [--persist=PATH]
     the_gooch web  [--port=PORT] [--persist=PATH]
+    the_gooch node --port=PORT [--peers=HOST:PORT,...] [--persist=PATH]
     the_gooch version
 
   USAGE
@@ -38,6 +39,15 @@ module TheGooch::CLI
       port = parse_port(argv)
       store = build_store(argv)
       TheGooch::Web.run(port, store)
+    when "node"
+      port = parse_port(argv)
+      store = build_store(argv)
+      blockchain = TheGooch::Blockchain.new(store)
+      node = TheGooch::Net::GossipNode.new(blockchain, port)
+      node.start
+      parse_peers(argv).each { |h, p| node.connect(h, p) }
+      puts "Gossip node #{node.node_id} listening on port #{port}. Press Ctrl-C to stop."
+      sleep
     when "version"
       puts TheGooch::VERSION
     else
@@ -62,6 +72,18 @@ module TheGooch::CLI
       end
     end
     3000
+  end
+
+  private def self.parse_peers(argv) : Array(Tuple(String, Int32))
+    argv.each do |a|
+      if a.starts_with?("--peers=")
+        return a.split("=", 2)[1].split(",").map do |addr|
+          parts = addr.strip.split(":")
+          {parts[0], parts[1].to_i}
+        end
+      end
+    end
+    [] of Tuple(String, Int32)
   end
 
   private def self.build_store(argv) : TheGooch::BlockStore::Base

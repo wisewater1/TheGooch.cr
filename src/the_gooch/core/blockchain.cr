@@ -61,6 +61,20 @@ class TheGooch::Blockchain
     end
   end
 
+  # Accept a pre-built block received from a peer. Returns false if the block
+  # is already known or fails hash verification.
+  def ingest(block : TheGooch::Block) : Bool
+    @mutex.synchronize do
+      return false if @chain.blocks.has_key?(block.hash)
+      return false unless block.valid_hash?
+      @chain.add(block)
+      @store.append(block)
+      @last_index = block.index if block.index > @last_index
+      TheGooch::Log.info { "block.ingest idx=#{block.index} hash=#{block.hash[0, 12]}" }
+      true
+    end
+  end
+
   def close
     @store.close
   end
