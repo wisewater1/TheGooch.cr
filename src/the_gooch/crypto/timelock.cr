@@ -53,11 +53,11 @@ module TheGooch::Crypto::TimeLock
 
   # Slow path: squaring `t` times, no φ(N) shortcut.
   def self.solve(puzzle : Puzzle) : Bytes
+    b = BigInt.new(0)
     {% if flag?(:no_gmp) %}
       b = puzzle.a % puzzle.n
       puzzle.t.times { b = (b * b) % puzzle.n }
     {% else %}
-      base = TheGooch::Crypto::Mpz.from_bigint(puzzle.a)
       modulus = TheGooch::Crypto::Mpz.from_bigint(puzzle.n)
       result = TheGooch::Crypto::Mpz.from_bigint(puzzle.a)
       puzzle.t.times do

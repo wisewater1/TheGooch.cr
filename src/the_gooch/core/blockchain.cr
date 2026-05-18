@@ -1,4 +1,5 @@
 require "./block"
+require "./block_store"
 require "./chain"
 require "./vote"
 
@@ -6,19 +7,33 @@ require "./vote"
 # single-threaded fibers (do NOT enable -Dpreview_mt for this shard).
 class TheGooch::Blockchain
   getter chain : TheGooch::Chain
+  getter store : TheGooch::BlockStore::Base
   @mutex : Mutex
   @last_index : Int32
 
-  def initialize
+  def initialize(@store : TheGooch::BlockStore::Base = TheGooch::BlockStore::Null.new)
     @chain = TheGooch::Chain.new
     @mutex = Mutex.new
     @last_index = -1
-    seed_genesis
+    existing = @store.load
+    if existing.empty?
+      seed_genesis
+    else
+      restore(existing)
+    end
   end
 
   private def seed_genesis
     body = TheGooch::BlockBody::Genesis.new
-    append_block("genesis", body.to_json, "", [] of String, TheGooch::Chain::MAIN_BRANCH)
+    append_block("genesis", body.to_json, "", Array(String).new, TheGooch::Chain::MAIN_BRANCH)
+  end
+
+  private def restore(blocks : Array(TheGooch::Block))
+    blocks.sort_by(&.index).each do |b|
+      @chain.add(b)
+      @last_index = b.index if b.index > @last_index
+    end
+    TheGooch::Log.info { "block.restore count=#{blocks.size}" }
   end
 
   def append_block(body_kind : String, body_json : String, merkle_root : String,
@@ -40,16 +55,23 @@ class TheGooch::Blockchain
         branch_id: branch_id
       )
       @chain.add(block)
+      @store.append(block)
       TheGooch::Log.info { "block.append kind=#{body_kind} idx=#{block.index} branch=#{branch_id} hash=#{block.hash[0, 12]}" }
       block
     end
   end
 
+  def close
+    @store.close
+  end
+
   struct ValidationReport
     getter ok : Bool
     getter issues : Array(String)
+
     def initialize(@ok, @issues)
     end
+
     def ok? : Bool
       @ok
     end

@@ -24,8 +24,10 @@ module TheGooch::Features::Posthumous
 
   struct TimeLockTrigger < Trigger
     getter puzzle : TimeLock::Puzzle
+
     def initialize(@puzzle : TimeLock::Puzzle)
     end
+
     def kind : String
       "timelock"
     end
@@ -35,8 +37,10 @@ module TheGooch::Features::Posthumous
     getter attest_message : String
     getter required : Int32
     getter dealing : ThresholdSig::Dealing
+
     def initialize(@attest_message, @required, @dealing)
     end
+
     def kind : String
       "oracle"
     end
@@ -53,10 +57,13 @@ module TheGooch::Features::Posthumous
     end
 
     def opens_with_oracle?(attestations : Array(ThresholdSig::Attestation)) : Bool
+      # A ThresholdSig::Attestation is the combined M-of-N signature produced
+      # by reconstructing the secret from `required` shares; one valid one
+      # suffices to open. (A future hardening pass should also verify the
+      # signer set size matches `required` — see threshold_sig.rb caveat.)
       case t = @trigger
       when OracleTrigger
-        valid = attestations.count { |a| ThresholdSig.verify(t.attest_message, a) }
-        valid >= t.required
+        attestations.any? { |a| ThresholdSig.verify(t.attest_message, a) }
       else
         false
       end

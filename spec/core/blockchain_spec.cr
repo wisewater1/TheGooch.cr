@@ -10,14 +10,14 @@ describe TheGooch::Blockchain do
   it "appends and validates" do
     bc = TheGooch::Blockchain.new
     body = TheGooch::BlockBody::Election.new([] of String, [] of String)
-    bc.append_block("election", body.to_json, "", [] of String, TheGooch::Chain::MAIN_BRANCH)
+    bc.append_block("election", body.to_json, "", Array(String).new, TheGooch::Chain::MAIN_BRANCH)
     bc.validate.ok?.should be_true
   end
 
   it "detects a tampered block hash" do
     bc = TheGooch::Blockchain.new
     body = TheGooch::BlockBody::Election.new([] of String, [] of String)
-    blk = bc.append_block("election", body.to_json, "", [] of String, TheGooch::Chain::MAIN_BRANCH)
+    blk = bc.append_block("election", body.to_json, "", Array(String).new, TheGooch::Chain::MAIN_BRANCH)
     blk.body_json = "tampered!"
     bc.validate.ok?.should be_false
   end
