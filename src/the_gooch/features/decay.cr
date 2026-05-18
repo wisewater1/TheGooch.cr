@@ -17,7 +17,7 @@ module TheGooch::Features::Decay
   end
 
   def self.expired?(original : Float64, effective : Float64,
-                   threshold : Float64 = Config::DECAY_EXPIRY_WEIGHT) : Bool
+                    threshold : Float64 = Config::DECAY_EXPIRY_WEIGHT) : Bool
     effective < original * threshold
   end
 
@@ -29,8 +29,8 @@ module TheGooch::Features::Decay
       eff = effective_weight(1.0, elapsed)
       if expired?(1.0, eff)
         body = TheGooch::BlockBody::Expiry.new(block.hash, eff)
-        expired << blockchain.append_block("expiry", body.to_json, "", [] of String,
-                                           TheGooch::Chain::MAIN_BRANCH)
+        expired << blockchain.append_block("expiry", body.to_json, "", Array(String).new,
+          TheGooch::Chain::MAIN_BRANCH)
       end
     end
     expired
@@ -39,7 +39,7 @@ module TheGooch::Features::Decay
   def self.ratify(blockchain : TheGooch::Blockchain, target_hash : String,
                   voter_ids : Array(String)) : TheGooch::Block
     body = TheGooch::BlockBody::Ratification.new(target_hash, voter_ids)
-    blockchain.append_block("ratification", body.to_json, "", [] of String,
-                            TheGooch::Chain::MAIN_BRANCH)
+    blockchain.append_block("ratification", body.to_json, "", Array(String).new,
+      TheGooch::Chain::MAIN_BRANCH)
   end
 end

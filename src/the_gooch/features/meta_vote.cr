@@ -12,6 +12,7 @@ module TheGooch::Features::MetaVote
     getter ephemeral_pubkey : String
     getter score : Float64
     getter signature : TheGooch::KeyPair::Signature
+
     def initialize(@ephemeral_pubkey, @score, @signature)
     end
   end
@@ -43,6 +44,6 @@ module TheGooch::Features::MetaVote
     values = valid.map(&.score)
     mean, variance = aggregate(values)
     body = TheGooch::BlockBody::Legitimacy.new(target_block_hash, values, mean, variance)
-    blockchain.append_block("legitimacy", body.to_json, "", [] of String, TheGooch::Chain::MAIN_BRANCH)
+    blockchain.append_block("legitimacy", body.to_json, "", Array(String).new, TheGooch::Chain::MAIN_BRANCH)
   end
 end

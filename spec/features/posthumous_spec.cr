@@ -63,7 +63,7 @@ describe TheGooch::Features::Posthumous do
       other = Posthumous.seal_with_oracle(alice, "B", "different-message", 2, 3)
       other_trigger = other.trigger.as(Posthumous::OracleTrigger)
       wrong_att = ThresholdSig.attest("different-message", other_trigger.dealing.shares[0, 2],
-                                      other_trigger.dealing.public_key)
+        other_trigger.dealing.public_key)
       ballot.opens_with_oracle?([wrong_att]).should be_false
     end
 

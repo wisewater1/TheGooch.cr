@@ -18,7 +18,7 @@ class TheGooch::Blockchain
 
   private def seed_genesis
     body = TheGooch::BlockBody::Genesis.new
-    append_block("genesis", body.to_json, "", [] of String, TheGooch::Chain::MAIN_BRANCH)
+    append_block("genesis", body.to_json, "", Array(String).new, TheGooch::Chain::MAIN_BRANCH)
   end
 
   def append_block(body_kind : String, body_json : String, merkle_root : String,
@@ -48,8 +48,10 @@ class TheGooch::Blockchain
   struct ValidationReport
     getter ok : Bool
     getter issues : Array(String)
+
     def initialize(@ok, @issues)
     end
+
     def ok? : Bool
       @ok
     end
