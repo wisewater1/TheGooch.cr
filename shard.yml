@@ -12,6 +12,11 @@ description: |
   meta-vote legitimacy rounds, adversarial minority protection (HHI),
   forking democracy (chain DAG), and exponential vote decay.
 
+dependencies:
+  kemal:
+    github: kemalcr/kemal
+    version: ~> 1.4.0
+
 targets:
   the_gooch:
     main: src/cli.cr

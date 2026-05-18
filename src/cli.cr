@@ -1,4 +1,5 @@
 require "./the_gooch"
+require "./the_gooch/web/server"
 
 module TheGooch::CLI
   USAGE = <<-USAGE
@@ -7,6 +8,7 @@ module TheGooch::CLI
   Usage:
     the_gooch demo [--time-skew=SECONDS]
     the_gooch validate
+    the_gooch web [--port=PORT]
     the_gooch version
 
   USAGE
@@ -28,6 +30,9 @@ module TheGooch::CLI
         puts "FAIL: #{report.issues.join("; ")}"
         exit 1
       end
+    when "web"
+      port = parse_port(argv)
+      TheGooch::Web.run(port)
     when "version"
       puts TheGooch::VERSION
     else
@@ -43,6 +48,15 @@ module TheGooch::CLI
       end
     end
     1.0e9
+  end
+
+  private def self.parse_port(argv) : Int32
+    argv.each do |a|
+      if a.starts_with?("--port=")
+        return a.split("=", 2)[1].to_i
+      end
+    end
+    3000
   end
 end
 
