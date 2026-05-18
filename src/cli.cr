@@ -6,9 +6,9 @@ module TheGooch::CLI
   the_gooch — research-grade blockchain voting demo
 
   Usage:
-    the_gooch demo [--time-skew=SECONDS]
-    the_gooch validate
-    the_gooch web [--port=PORT]
+    the_gooch demo [--time-skew=SECONDS] [--persist=PATH]
+    the_gooch validate [--persist=PATH]
+    the_gooch web  [--port=PORT] [--persist=PATH]
     the_gooch version
 
   USAGE
@@ -19,10 +19,14 @@ module TheGooch::CLI
     case argv.first?
     when "demo"
       time_skew = parse_skew(argv)
-      TheGooch::Demo.run(STDOUT, time_skew)
+      store = build_store(argv)
+      TheGooch::Demo.run(STDOUT, time_skew, store)
+      store.close
     when "validate"
-      result = TheGooch::Demo.run(IO::Memory.new, 1.0e9)
+      store = build_store(argv)
+      result = TheGooch::Demo.run(IO::Memory.new, 1.0e9, store)
       report = result.blockchain.validate
+      store.close
       if report.ok?
         puts "OK — #{result.blockchain.chain.size} blocks; branches=#{result.blockchain.chain.branches}"
         exit 0
@@ -32,7 +36,8 @@ module TheGooch::CLI
       end
     when "web"
       port = parse_port(argv)
-      TheGooch::Web.run(port)
+      store = build_store(argv)
+      TheGooch::Web.run(port, store)
     when "version"
       puts TheGooch::VERSION
     else
@@ -57,6 +62,15 @@ module TheGooch::CLI
       end
     end
     3000
+  end
+
+  private def self.build_store(argv) : TheGooch::BlockStore::Base
+    argv.each do |a|
+      if a.starts_with?("--persist=")
+        return TheGooch::BlockStore::Jsonl.new(a.split("=", 2)[1])
+      end
+    end
+    TheGooch::BlockStore::Null.new
   end
 end
 

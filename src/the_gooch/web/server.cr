@@ -121,8 +121,9 @@ module TheGooch::Web
     StateView.new(blocks, branches, tally, result.feature_blocks)
   end
 
-  def self.run(port : Int32 = 3000)
-    result = TheGooch::Demo.run(IO::Memory.new, 1.0e9)
+  def self.run(port : Int32 = 3000,
+               store : TheGooch::BlockStore::Base = TheGooch::BlockStore::Null.new)
+    result = TheGooch::Demo.run(IO::Memory.new, 1.0e9, store)
     state = build_state(result)
     state_json = state.to_json
 

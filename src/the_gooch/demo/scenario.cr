@@ -31,8 +31,9 @@ module TheGooch::Demo
     end
   end
 
-  def self.run(io : IO = STDOUT, time_skew_seconds : Float64 = 1.0e9) : Result
-    blockchain = TheGooch::Blockchain.new
+  def self.run(io : IO = STDOUT, time_skew_seconds : Float64 = 1.0e9,
+               store : TheGooch::BlockStore::Base = TheGooch::BlockStore::Null.new) : Result
+    blockchain = TheGooch::Blockchain.new(store)
     feature_blocks = Hash(String, Array(Int32)).new { |h, k| h[k] = [] of Int32 }
 
     log = ->(feature : String, message : String) do
