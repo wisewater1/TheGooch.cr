@@ -1,0 +1,33 @@
+require "log"
+require "json"
+require "big"
+
+module TheGooch
+  VERSION = "0.2.0"
+  Log     = ::Log.for("the_gooch")
+end
+
+require "./the_gooch/config"
+require "./the_gooch/crypto/hash"
+require "./the_gooch/crypto/group"
+require "./the_gooch/crypto/keypair"
+require "./the_gooch/crypto/pedersen"
+require "./the_gooch/crypto/range_proof"
+require "./the_gooch/crypto/shamir"
+require "./the_gooch/crypto/threshold_sig"
+require "./the_gooch/crypto/ffi/gmp"
+require "./the_gooch/crypto/timelock"
+require "./the_gooch/core/voter"
+require "./the_gooch/core/vote"
+require "./the_gooch/core/merkle"
+require "./the_gooch/core/block"
+require "./the_gooch/core/chain"
+require "./the_gooch/core/blockchain"
+require "./the_gooch/features/emotional"
+require "./the_gooch/features/posthumous"
+require "./the_gooch/features/meta_vote"
+require "./the_gooch/features/minority"
+require "./the_gooch/features/forking"
+require "./the_gooch/features/decay"
+require "./the_gooch/tally/engine"
+require "./the_gooch/demo/scenario"

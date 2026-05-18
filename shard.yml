@@ -1,0 +1,19 @@
+name: the_gooch
+version: 0.2.0
+crystal: ">= 1.10.0"
+
+authors:
+  - TheGooch contributors
+
+description: |
+  Research-grade blockchain voting system integrating six novel governance
+  primitives: emotional weighted voting (Pedersen + ZK range proofs),
+  posthumous voting (Rivest time-lock + M-of-N oracle attestation),
+  meta-vote legitimacy rounds, adversarial minority protection (HHI),
+  forking democracy (chain DAG), and exponential vote decay.
+
+targets:
+  the_gooch:
+    main: src/cli.cr
+
+license: MIT

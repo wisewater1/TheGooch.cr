@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+# Shim: prefer a pre-built binary, otherwise compile on the fly.
+set -e
+DIR=$(cd "$(dirname "$0")/.." && pwd)
+if [ -x "$DIR/bin/the_gooch.compiled" ]; then
+  exec "$DIR/bin/the_gooch.compiled" "$@"
+fi
+exec crystal run "$DIR/src/cli.cr" -- "$@"
