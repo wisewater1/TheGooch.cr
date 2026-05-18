@@ -1,11 +1,12 @@
 require "../core/voter"
-require "../core/blockchain"
 require "../crypto/keypair"
 
-# Meta-vote / legitimacy round. After a result block is finalized, voters
-# cast an anonymous trust score 0..1 on the perceived legitimacy of that
-# result. Anonymity is approximated by ephemeral keys voters register
-# ahead of the round (documented research limitation — not a real ring sig).
+# Meta-vote / legitimacy round — pure computation only.
+# Blockchain mutation (commit_round) lives in
+# TheGooch::Blockchain::Handlers::MetaVoteHandler.
+#
+# Anonymity is approximated by ephemeral keys voters register ahead of the
+# round (documented research limitation — not a real ring sig).
 module TheGooch::Features::MetaVote
   struct TrustScore
     include JSON::Serializable
@@ -36,14 +37,5 @@ module TheGooch::Features::MetaVote
     mean = scores.sum / scores.size
     variance = scores.map { |s| (s - mean) ** 2 }.sum / scores.size
     {mean, variance}
-  end
-
-  def self.commit_round(blockchain : TheGooch::Blockchain, target_block_hash : String,
-                        scores : Array(TrustScore)) : TheGooch::Block
-    valid = scores.select { |s| verify(target_block_hash, s) }
-    values = valid.map(&.score)
-    mean, variance = aggregate(values)
-    body = TheGooch::BlockBody::Legitimacy.new(target_block_hash, values, mean, variance)
-    blockchain.append_block("legitimacy", body.to_json, "", Array(String).new, TheGooch::Chain::MAIN_BRANCH)
   end
 end

@@ -76,14 +76,16 @@ describe TheGooch::Features::MetaVote do
       var.should be_close(0.25, 1e-10)
     end
   end
+end
 
-  describe ".commit_round" do
+describe TheGooch::Blockchain::Handlers::MetaVoteHandler do
+  describe "#commit_round" do
     it "appends a legitimacy block with valid scores" do
       bc = TheGooch::Blockchain.new
       target = bc.chain.head_of(TheGooch::Chain::MAIN_BRANCH).not_nil!.hash
       ts1, _ = MetaVote.cast(0.9, target)
       ts2, _ = MetaVote.cast(0.4, target)
-      block = MetaVote.commit_round(bc, target, [ts1, ts2])
+      block = TheGooch::Blockchain::Handlers::MetaVoteHandler.new(bc).commit_round(target, [ts1, ts2])
       block.body_kind.should eq("legitimacy")
     end
 
@@ -92,7 +94,7 @@ describe TheGooch::Features::MetaVote do
       target = bc.chain.head_of(TheGooch::Chain::MAIN_BRANCH).not_nil!.hash
       ts_good, _ = MetaVote.cast(0.9, target)
       ts_bad, _ = MetaVote.cast(0.9, "wrong-hash")
-      block = MetaVote.commit_round(bc, target, [ts_good, ts_bad])
+      block = TheGooch::Blockchain::Handlers::MetaVoteHandler.new(bc).commit_round(target, [ts_good, ts_bad])
       parsed = TheGooch::BlockBody::Legitimacy.from_json(block.body_json)
       parsed.trust_scores.size.should eq(1)
     end
@@ -101,7 +103,7 @@ describe TheGooch::Features::MetaVote do
       bc = TheGooch::Blockchain.new
       target = bc.chain.head_of(TheGooch::Chain::MAIN_BRANCH).not_nil!.hash
       ts, _ = MetaVote.cast(0.6, target)
-      MetaVote.commit_round(bc, target, [ts])
+      TheGooch::Blockchain::Handlers::MetaVoteHandler.new(bc).commit_round(target, [ts])
       bc.validate.ok?.should be_true
     end
   end

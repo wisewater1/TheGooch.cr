@@ -3,6 +3,13 @@ require "./block_store"
 require "./chain"
 require "./vote"
 
+# Forward-declare the Handlers namespace so handler classes can be opened as
+# TheGooch::Blockchain::Handlers::XyzHandler without circular requires.
+class TheGooch::Blockchain
+  module Handlers
+  end
+end
+
 # Top-level facade. Mutating methods are protected by a single Mutex; we run
 # single-threaded fibers (do NOT enable -Dpreview_mt for this shard).
 class TheGooch::Blockchain

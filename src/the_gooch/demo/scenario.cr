@@ -10,6 +10,10 @@ require "../features/minority"
 require "../features/forking"
 require "../features/decay"
 require "../tally/engine"
+require "../blockchain/handlers/election_handler"
+require "../blockchain/handlers/forking_handler"
+require "../blockchain/handlers/meta_vote_handler"
+require "../blockchain/handlers/decay_handler"
 
 # End-to-end deterministic election that exercises every feature.
 #
@@ -36,6 +40,11 @@ module TheGooch::Demo
     blockchain = TheGooch::Blockchain.new(store)
     feature_blocks = Hash(String, Array(Int32)).new { |h, k| h[k] = [] of Int32 }
 
+    election_h  = TheGooch::Blockchain::Handlers::ElectionHandler.new(blockchain)
+    forking_h   = TheGooch::Blockchain::Handlers::ForkingHandler.new(blockchain)
+    meta_vote_h = TheGooch::Blockchain::Handlers::MetaVoteHandler.new(blockchain)
+    decay_h     = TheGooch::Blockchain::Handlers::DecayHandler.new(blockchain)
+
     log = ->(feature : String, message : String) do
       io.puts "[feature:#{feature}] #{message}"
     end
@@ -57,7 +66,7 @@ module TheGooch::Demo
     # --- First election: rigged narrow margin --------------------------------
     log.call("emotional", "casting first round (10 living voters, varied intensities)")
     first_votes, first_openings = cast_first_round(voters)
-    first_election = commit_election(blockchain, first_votes, Array(String).new,
+    first_election = commit_election(election_h, first_votes, Array(String).new,
       TheGooch::Chain::MAIN_BRANCH, log, feature_blocks)
 
     outcome = TheGooch::Tally.compute(first_votes, first_openings)
@@ -70,8 +79,7 @@ module TheGooch::Demo
     )
     if assessment.trigger && (report = assessment.report)
       log.call("minority", "HHI=#{report.hhi.round(3)} concentrated in '#{report.dominant_region}' — deferring finalization")
-      delib = TheGooch::BlockBody::Deliberation.new(first_election.hash, report)
-      blk = blockchain.append_block("deliberation", delib.to_json, "", Array(String).new, TheGooch::Chain::MAIN_BRANCH)
+      blk = election_h.commit_deliberation(first_election.hash, report)
       feature_blocks["minority"] << blk.index
     else
       log.call("minority", "no trigger; finalizing")
@@ -83,27 +91,24 @@ module TheGooch::Demo
 
     # Open posthumous ballots between rounds.
     opened_ids = open_posthumous(sealed_tl, sealed_oracle, attest_msg, voters, second_votes, log)
-    second_election = commit_election(blockchain, second_votes, opened_ids,
+    second_election = commit_election(election_h, second_votes, opened_ids,
       TheGooch::Chain::MAIN_BRANCH, log, feature_blocks)
 
     outcome2 = TheGooch::Tally.compute(second_votes, second_openings)
     log.call("tally", "second round raw=#{outcome2.per_candidate_raw} winner=#{outcome2.winner} raw_margin=#{outcome2.raw_margin.round(3)} intensity_gap=#{outcome2.intensity_gap.round(3)}")
-    tally_blk = blockchain.append_block("tally", outcome2.to_body(second_election.hash).to_json,
-      "", Array(String).new, TheGooch::Chain::MAIN_BRANCH)
+    tally_blk = election_h.commit_tally(outcome2, second_election.hash)
     feature_blocks["tally"] << tally_blk.index
 
     # --- Forking democracy ---------------------------------------------------
     if TheGooch::Features::Forking.should_fork?(outcome2.raw_margin, outcome2.intensity_gap)
       log.call("forking", "consensus weak — splitting chain")
-      branch_a, branch_b, fork_blk = TheGooch::Features::Forking.fork!(
-        blockchain, tally_blk.hash, "intensity_gap=#{outcome2.intensity_gap.round(3)}"
-      )
+      branch_a, branch_b, fork_blk = forking_h.fork!(tally_blk.hash,
+        "intensity_gap=#{outcome2.intensity_gap.round(3)}")
       feature_blocks["forking"] << fork_blk.index
       log.call("forking", "branches: #{branch_a}, #{branch_b}")
 
-      # short reconciliation window (skipped for demo determinism)
       log.call("forking", "reconciliation: merging branches")
-      recon_blk = TheGooch::Features::Forking.reconcile(blockchain, branch_a, branch_b, "merge")
+      recon_blk = forking_h.reconcile(branch_a, branch_b, "merge")
       feature_blocks["forking"] << recon_blk.index
     end
 
@@ -114,7 +119,7 @@ module TheGooch::Demo
       ts, _ = TheGooch::Features::MetaVote.cast(score, tally_blk.hash)
       ts
     end
-    leg_blk = TheGooch::Features::MetaVote.commit_round(blockchain, tally_blk.hash, trust_scores)
+    leg_blk = meta_vote_h.commit_round(tally_blk.hash, trust_scores)
     feature_blocks["meta_vote"] << leg_blk.index
     leg_body = TheGooch::BlockBody::Legitimacy.from_json(leg_blk.body_json)
     log.call("meta_vote", "trust mean=#{leg_body.mean.round(3)} variance=#{leg_body.variance.round(4)}")
@@ -122,12 +127,12 @@ module TheGooch::Demo
     # --- Decay simulation ----------------------------------------------------
     log.call("decay", "fast-forwarding #{time_skew_seconds.to_i} seconds — scanning for expiry")
     future = Time.utc + time_skew_seconds.to_i64.seconds
-    expiries = TheGooch::Features::Decay.scan(blockchain, future)
+    expiries = decay_h.scan(future)
     expiries.each { |b| feature_blocks["decay"] << b.index }
     log.call("decay", "emitted #{expiries.size} expiry block(s)")
 
     if !expiries.empty?
-      ratify_blk = TheGooch::Features::Decay.ratify(blockchain, tally_blk.hash, voters.first(6).map(&.id))
+      ratify_blk = decay_h.ratify(tally_blk.hash, voters.first(6).map(&.id))
       feature_blocks["decay"] << ratify_blk.index
       log.call("decay", "ratified — clock reset")
     end
@@ -223,12 +228,9 @@ module TheGooch::Demo
     opened_ids
   end
 
-  private def self.commit_election(blockchain, votes, opened_ids, branch, log, feature_blocks) : TheGooch::Block
-    votes_json = votes.map(&.to_json)
-    leaves = votes_json
-    merkle_root = TheGooch::Merkle.root(leaves)
-    body = TheGooch::BlockBody::Election.new(votes_json, opened_ids)
-    blk = blockchain.append_block("election", body.to_json, merkle_root, [] of String, branch)
+  private def self.commit_election(handler : TheGooch::Blockchain::Handlers::ElectionHandler,
+                                   votes, opened_ids, branch, log, feature_blocks) : TheGooch::Block
+    blk = handler.commit_election(votes, opened_ids, branch)
     feature_blocks["emotional"] << blk.index unless feature_blocks["emotional"].includes?(blk.index)
     feature_blocks["posthumous"] << blk.index if opened_ids.any?
     log.call("election", "committed block #{blk.index} (#{votes.size} votes, #{opened_ids.size} opened seals)")

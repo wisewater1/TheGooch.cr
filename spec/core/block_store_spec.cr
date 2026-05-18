@@ -31,7 +31,7 @@ describe TheGooch::BlockStore::Jsonl do
     path = tmp_path
     bc = TheGooch::Blockchain.new(TheGooch::BlockStore::Jsonl.new(path))
     parent = bc.chain.head_of(TheGooch::Chain::MAIN_BRANCH).not_nil!.hash
-    TheGooch::Features::Forking.fork!(bc, parent, "test")
+    TheGooch::Blockchain::Handlers::ForkingHandler.new(bc).fork!(parent, "test")
     pre_branches = bc.chain.branches.sort
     pre_size = bc.chain.size
     bc.close
